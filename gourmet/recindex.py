@@ -211,6 +211,12 @@ class RecIndex:
         self.last_search = {}
         self.search()
         #self.do_search(None,None)
+        
+    # change the word wrapping of the column to fit the new width
+    # the -4 gives it a bit of a buffer on the right
+    def col_width_change_cb (self, col, width, gtk_renderer):
+        gtk_renderer.set_property('wrap-width', col.get_property('width') -4)
+        
 
     def create_rmodel (self, vw):
         self.rmodel = RecipeModel(vw,self.rd,per_page=self.prefs.get('recipes_per_page',12))
@@ -236,7 +242,7 @@ class RecIndex:
         self.rectree_conf.apply_column_order()
         self.rectree_conf.apply_visibility()
         self.rectree.connect("row-activated",self.rec_tree_select_rec)
-        self.rectree.connect('key-press-event',self.tree_keypress_cb)        
+        self.rectree.connect('key-press-event',self.tree_keypress_cb)
         self.rectree.get_selection().connect("changed",self.selection_changedCB)
         self.rectree.set_property('rules-hint',True) # stripes!
         self.rectree.expand_all()
@@ -343,12 +349,15 @@ class RecIndex:
                 else:
                     renderer.get_property('wrap-width')
                     renderer.set_property('wrap-mode',pango.WRAP_WORD)
-                    if c == 'title': renderer.set_property('wrap-width',200)
-                    else: renderer.set_property('wrap-width',150)
+                    # don't wrap to start with, later when the column size changes
+                    # the text will be wrapped to fit
+                    renderer.set_property('wrap-width', -1)
             renderer.set_property('editable',self.editable)
             renderer.connect('edited',self.rtree_edited_cb,n, c)
             titl = self.rtcolsdic[c]
             col = gtk.TreeViewColumn('_%s'%titl,renderer, text=n)
+            # connect a signal to tell self when the column width changes
+            col.connect("notify::width", self.col_width_change_cb, renderer)
             # Ensure that the columns aren't really narrow on initialising.
             #if c=='title':            # Adjust these two to be even bigger
             #    col.set_min_width(200)
